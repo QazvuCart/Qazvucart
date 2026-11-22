@@ -47,3 +47,13 @@
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation: none !important; transition: none !important; }
 }
+
+@layer components {
+  .field { width: 100%; min-height: 3rem; border: 2px solid rgb(38 55 47 / .3); border-radius: .75rem; background: var(--color-porcelain); padding: .5rem .875rem; }
+  .field:focus-visible { border-color: var(--color-forest); outline-offset: 1px; }
+  .lbl { display: block; font-weight: 600; margin-bottom: .25rem; }
+  .btn-sm { min-height: 2.75rem; padding: 0 1rem; font-size: .9rem; }
+  .btn-danger { border: 2px solid #9b2c2c; color: #9b2c2c; }
+  .btn-danger:hover { background: #9b2c2c; color: #fff; }
+  .err { color: #9b2c2c; font-weight: 500; }
+}

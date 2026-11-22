@@ -1,6 +1,6 @@
 # QazvuCart V1 (Angular + Express + PostgreSQL)
 
-Status: Phases 1-3 complete (foundation, design system, storefront). Phases 4-6 follow.
+Status: Phases 1-4 complete (foundation, design system, storefront, admin). Phases 5-6 follow.
 
 ## Setup
 1. Requirements: Node 20.19+ or 22, PostgreSQL 14+.
@@ -21,7 +21,7 @@ Status: Phases 1-3 complete (foundation, design system, storefront). Phases 4-6 
 - Future multi-vendor: add a nullable `vendor_id` to `products` later; no marketplace code in V1.
 
 ## Not yet built
-Admin and auth (4), Cloudinary (4), WhatsApp ordering (5), tests (6).
+WhatsApp ordering (5), tests (6).
 
 ## Phase 3: storefront
 - Routes: `/`, `/products` (search, category, sort via query string), `/categories/:slug`, `/products/:slug`, `/about`, `/contact`, `/policies/:slug`.
@@ -31,3 +31,38 @@ Admin and auth (4), Cloudinary (4), WhatsApp ordering (5), tests (6).
 - About, contact and policy text come from `site_settings` keys: `about_content`, `contact_email`, `contact_phone`, `contact_address`, `instagram_url`, `whatsapp_number`, `policy_shipping`, `policy_returns`, `policy_privacy`, `policy_terms`. Until the admin screen exists (Phase 4), add them with SQL. Empty policies show a clearly marked draft notice.
 - The product page validates required options and computes totals in integer paise. The WhatsApp order form and button arrive in Phase 5.
 - `comparison_price_minor` is stored but not shown: no discount or reference price is displayed in V1.
+
+## Phase 4: admin
+### Create the admin account
+```
+cd api
+ADMIN_EMAIL=you@example.com ADMIN_PASSWORD='a long passphrase of 12+ characters' npm run create-admin
+```
+Run it again with a new password to reset it. Then open `/admin/login`. Sessions last 8 hours.
+
+### Cloudinary setup
+1. Create a free account at https://cloudinary.com and copy the cloud name, API key and API secret from the dashboard.
+2. Put them in `api/.env` (`CLOUDINARY_CLOUD_NAME`, `CLOUDINARY_API_KEY`, `CLOUDINARY_API_SECRET`). The secret never leaves the API.
+3. Uploads use **server-signed** uploads, not an unsigned preset. An unsigned preset lets anyone who finds its name upload to your account; a signed upload needs a signature that only a logged-in admin can request. The signature fixes the folder (`CLOUDINARY_FOLDER`) and the allowed formats (jpg, png, webp). The 8 MB limit is checked in the browser, and again by the API, which asks Cloudinary for the real size and format when a product is saved and deletes oversized files.
+4. Images removed from a product, or belonging to a deleted product, are deleted from Cloudinary only if no other product still uses them. Images uploaded in the form but never saved stay in Cloudinary until you remove them there.
+
+### Admin security
+- Passwords are hashed with Argon2id. Sessions are random tokens stored hashed in the database, in an httpOnly, SameSite=Strict cookie (Secure in production).
+- Every write needs an `x-csrf-token` header that is derived from the session, and every admin route checks the session on the server.
+- Login is limited to 10 failed attempts per 15 minutes per IP. The admin area is rendered in the browser only and is marked noindex.
+- Behind HTTPS in production, set `NODE_ENV=production` so the cookie is Secure.
+
+## Deploying on Render
+Create a PostgreSQL database, then two Web Services from this repo.
+
+**API service** (Root Directory `api`)
+- Build: `npm install --include=dev && npm run build`
+- Start: `node dist/db/migrate.js && node dist/server.js`
+- Env: `NODE_VERSION=22`, `NODE_ENV=production`, `DATABASE_URL` (internal URL), `SESSION_SECRET`, `CLOUDINARY_*`, optional `WHATSAPP_NUMBER`, `INSTAGRAM_URL`.
+
+**Web service** (Root Directory `web`)
+- Build: `npm install --include=dev && npm run build`
+- Start: `npm run serve:ssr`
+- Env: `NODE_VERSION=22`, `API_ORIGIN` (the API's internal URL, e.g. http://qazvucart-api:10000), `PUBLIC_SITE_URL` (the public https URL).
+
+Create the admin once from the API service's Shell: `ADMIN_EMAIL=you@example.com ADMIN_PASSWORD='long passphrase' node dist/scripts/create-admin.js`

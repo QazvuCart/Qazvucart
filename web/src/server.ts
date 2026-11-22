@@ -9,6 +9,7 @@ const siteUrl = (process.env['PUBLIC_SITE_URL'] || 'http://localhost:4200').repl
 const xml = (s: string) => s.replace(/[<>&'"]/g, (c) => ({ '<': '&lt;', '>': '&gt;', '&': '&amp;', "'": '&apos;', '"': '&quot;' }[c]!));
 
 const app = express();
+app.set('trust proxy', 1);
 const angular = new AngularNodeAppEngine();
 
 app.get('/robots.txt', (_req, res) => {
@@ -28,13 +29,28 @@ app.get('/sitemap.xml', async (_req, res, next) => {
   } catch (e) { next(e); }
 });
 
+// The browser calls /api on this origin (same-origin cookies, no CORS). Forward those calls to the API service.
+app.use('/api', express.raw({ type: () => true, limit: '1mb' }), async (req, res, next) => {
+  try {
+    const headers: Record<string, string> = { 'x-forwarded-for': req.ip ?? '' };
+    for (const h of ['cookie', 'content-type', 'x-csrf-token', 'accept']) { const v = req.get(h); if (v) headers[h] = v; }
+    const hasBody = !['GET', 'HEAD'].includes(req.method) && Buffer.isBuffer(req.body) && req.body.length > 0;
+    const r = await fetch(apiOrigin + req.originalUrl, { method: req.method, headers, body: hasBody ? new Uint8Array(req.body) : undefined, redirect: 'manual' });
+    res.status(r.status);
+    for (const [k, v] of r.headers) if (!['set-cookie', 'content-encoding', 'content-length', 'transfer-encoding', 'connection'].includes(k)) res.setHeader(k, v);
+    const cookies = r.headers.getSetCookie();
+    if (cookies.length) res.setHeader('set-cookie', cookies);
+    res.send(Buffer.from(await r.arrayBuffer()));
+  } catch (e) { next(e); }
+});
+
 app.use(express.static(browserDist, { maxAge: '1y', index: false, redirect: false }));
 app.use((req, res, next) => {
   angular.handle(req).then((r) => (r ? writeResponseToNodeResponse(r, res) : next())).catch(next);
 });
 
 if (isMainModule(import.meta.url)) {
-  const port = Number(process.env['WEB_PORT']) || 4200;
+  const port = Number(process.env['WEB_PORT'] || process.env['PORT']) || 4200;
   app.listen(port, () => console.log(`Web (SSR) listening on :${port}`));
 }
 export const reqHandler = createNodeRequestHandler(app);

@@ -92,7 +92,7 @@ publicRouter.get('/categories', async (_req, res, next) => {
 });
 
 // Whitelisted, non-secret settings only. Never expose arbitrary keys.
-const PUBLIC_KEYS = ['about_content', 'contact_email', 'contact_phone', 'contact_address', 'instagram_url', 'whatsapp_number',
+export const PUBLIC_KEYS = ['about_content', 'contact_email', 'contact_phone', 'contact_address', 'instagram_url', 'whatsapp_number',
   'policy_shipping', 'policy_returns', 'policy_privacy', 'policy_terms'];
 
 publicRouter.get('/settings', async (_req, res, next) => {

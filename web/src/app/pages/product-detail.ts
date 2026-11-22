@@ -3,6 +3,7 @@ import { Component, computed, effect, inject, input, signal } from '@angular/cor
 import { toObservable, toSignal } from '@angular/core/rxjs-interop';
 import { RouterLink } from '@angular/router';
 import { catchError, map, of, startWith, switchMap } from 'rxjs';
+import { cld, srcset } from '../core/cloudinary';
 import { ProductDetail, formatMinor } from '../core/product.model';
 import { ProductsService } from '../core/products.service';
 import { Seo } from '../core/seo';
@@ -36,7 +37,7 @@ type State = { status: 'loading' | 'ok' | 'notfound' | 'error'; product?: Produc
               <div>
                 <div class="rounded-2xl bg-sage shadow-lift overflow-hidden aspect-[4/5] grid place-items-center">
                   @if (p.images[activeImg()]; as img) {
-                    <img [src]="img.url" [alt]="img.alt" [attr.width]="img.width" [attr.height]="img.height" fetchpriority="high" decoding="async" class="size-full object-cover">
+                    <img [src]="cld(img.url, 960)" [attr.srcset]="srcset(img.url, [480, 720, 960, 1280])" [attr.sizes]="'(min-width: 768px) 50vw, 100vw'" [alt]="img.alt" [attr.width]="img.width" [attr.height]="img.height" fetchpriority="high" decoding="async" class="size-full object-cover">
                   } @else {
                     <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.3" class="opacity-40" role="img" aria-label="No image yet">
                       <rect x="3" y="4" width="18" height="16" rx="2"/><circle cx="9" cy="10" r="1.6"/><path d="M4 18l5-5 4 4 3-3 4 4"/>
@@ -48,7 +49,7 @@ type State = { status: 'loading' | 'ok' | 'notfound' | 'error'; product?: Produc
                     @for (img of p.images; track $index) {
                       <li><button type="button" (click)="activeImg.set($index)" [attr.aria-label]="'Show image ' + ($index + 1)" [attr.aria-current]="$index === activeImg()"
                                   class="size-16 rounded-lg overflow-hidden border-2 bg-sage-soft" [class]="$index === activeImg() ? 'border-tangerine' : 'border-transparent'">
-                        <img [src]="img.url" alt="" loading="lazy" class="size-full object-cover"></button></li>
+                        <img [src]="cld(img.url, 128)" alt="" loading="lazy" class="size-full object-cover"></button></li>
                     }
                   </ul>
                 }
@@ -124,6 +125,8 @@ export class ProductDetailPage {
   private api = inject(ProductsService);
   slug = input.required<string>();
   money = formatMinor;
+  cld = cld;
+  srcset = srcset;
 
   state = toSignal(
     toObservable(this.slug).pipe(

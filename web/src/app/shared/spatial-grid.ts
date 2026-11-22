@@ -1,5 +1,6 @@
 import { Component, input } from '@angular/core';
 import { RouterLink } from '@angular/router';
+import { cld, srcset } from '../core/cloudinary';
 import { ProductCard, formatMinor } from '../core/product.model';
 
 /** Asymmetric bento grid: every fifth card is large. Only renders what it is given. */
@@ -14,7 +15,7 @@ import { ProductCard, formatMinor } from '../core/product.model';
              (pointermove)="tilt($event)" (pointerleave)="reset($event)">
             <div class="bg-sage-soft grid place-items-center" [class]="i % 5 === 0 ? 'aspect-[4/3] md:aspect-[5/4]' : 'aspect-[4/5]'">
               @if (p.image; as img) {
-                <img [src]="img.url" [alt]="img.alt" [attr.width]="img.width" [attr.height]="img.height"
+                <img [src]="cld(img.url, 640)" [attr.srcset]="srcset(img.url, [320, 640, 960])" [attr.sizes]="'(min-width: 1024px) 25vw, 50vw'" [alt]="img.alt" [attr.width]="img.width" [attr.height]="img.height"
                      loading="lazy" decoding="async" class="size-full object-cover">
               } @else {
                 <svg width="44" height="44" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" class="opacity-40" role="img" aria-label="No image yet">
@@ -39,6 +40,8 @@ import { ProductCard, formatMinor } from '../core/product.model';
 export class SpatialGrid {
   products = input.required<ProductCard[]>();
   price = formatMinor;
+  cld = cld;
+  srcset = srcset;
 
   tilt(e: PointerEvent) {
     if (e.pointerType !== 'mouse') return; // no tilt on touch

@@ -9,6 +9,10 @@ const schema = z.object({
   // Optional public contact defaults. Admin settings (site_settings) override them.
   WHATSAPP_NUMBER: z.string().optional(),
   INSTAGRAM_URL: z.string().optional(),
+  CLOUDINARY_CLOUD_NAME: z.string().optional(),
+  CLOUDINARY_API_KEY: z.string().optional(),
+  CLOUDINARY_API_SECRET: z.string().optional(),
+  CLOUDINARY_FOLDER: z.string().regex(/^[A-Za-z0-9_\/-]{1,60}$/).default('qazvucart/products'),
 });
 
 const parsed = schema.safeParse(process.env);
