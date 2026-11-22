@@ -1,0 +1,49 @@
+@import "tailwindcss";
+
+/* Brand tokens. Ratio guide: porcelain ~50%, sage ~40%, tangerine ~10% (actions only). */
+@theme {
+  --color-porcelain: #F5F3EA;
+  --color-sage: #A8C3AE;
+  --color-sage-soft: color-mix(in srgb, #A8C3AE 38%, #F5F3EA);
+  --color-tangerine: #F07845;
+  --color-forest: #26372F;
+  --font-display: "Bricolage Grotesque", ui-sans-serif, system-ui, sans-serif;
+  --font-sans: "Figtree", ui-sans-serif, system-ui, sans-serif;
+  --shadow-lift: 0 1px 2px rgb(38 55 47 / .12), 0 14px 28px -12px rgb(38 55 47 / .28), 0 34px 60px -30px rgb(38 55 47 / .3);
+}
+
+@layer base {
+  html { background: var(--color-porcelain); color: var(--color-forest); -webkit-text-size-adjust: 100%; }
+  body { margin: 0; font-family: var(--font-sans); line-height: 1.6; overflow-x: hidden; min-height: 100dvh; }
+  h1, h2, h3 { font-family: var(--font-display); line-height: 1.08; letter-spacing: -0.02em; font-weight: 700; }
+  :focus-visible { outline: 3px solid var(--color-forest); outline-offset: 3px; border-radius: 4px; }
+  img { max-width: 100%; height: auto; display: block; }
+}
+
+@layer components {
+  .btn { display: inline-flex; align-items: center; justify-content: center; min-height: 48px; padding: 0 1.5rem;
+         border-radius: .75rem; font-weight: 600; text-decoration: none; transition: transform .18s, box-shadow .18s; cursor: pointer; }
+  .btn-primary { background: var(--color-tangerine); color: var(--color-forest); box-shadow: 0 8px 18px -10px rgb(240 120 69 / .8); }
+  .btn-primary:hover { transform: translateY(-2px); }
+  .btn-quiet { background: transparent; color: var(--color-forest); border: 2px solid var(--color-forest); }
+  .btn-quiet:hover { background: var(--color-forest); color: var(--color-porcelain); }
+  .container-qz { width: min(100% - 2.5rem, 72rem); margin-inline: auto; }
+
+  /* Hero composition: layered empty frames in perspective. Decorative only, not product imagery. */
+  .frame-stack { position: relative; width: min(100%, 24rem); aspect-ratio: 4 / 5; margin-inline: auto; perspective: 1100px; }
+  .frame-stack .f { position: absolute; background: var(--color-sage); border-radius: .5rem; box-shadow: var(--shadow-lift);
+                    animation: settle .9s cubic-bezier(.2, .7, .2, 1) both; }
+  .frame-stack .f1 { inset: 10% 26% 20% 0; transform: rotateY(16deg) rotate(-4deg); background: color-mix(in srgb, var(--color-sage) 72%, var(--color-porcelain)); }
+  .frame-stack .f2 { inset: 0 4% 30% 26%; transform: rotateY(-12deg) rotate(3deg); animation-delay: .12s; }
+  .frame-stack .f3 { inset: 40% 0 0 34%; border-radius: 2.2rem; background: var(--color-porcelain); border: 3px solid var(--color-sage);
+                     transform: rotate(-2deg); animation-delay: .24s; }
+  .frame-stack .dot { position: absolute; width: 1.1rem; height: 1.1rem; border-radius: 50%; background: var(--color-tangerine); left: 20%; bottom: 14%; }
+  @keyframes settle { from { translate: 0 28px; opacity: 0; } to { translate: 0 0; opacity: 1; } }
+
+  /* Spatial product card: tilt is driven by pointer position via --rx/--ry. */
+  .tilt { transform: perspective(900px) rotateX(var(--rx, 0deg)) rotateY(var(--ry, 0deg)); transition: transform .2s ease-out, box-shadow .2s; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation: none !important; transition: none !important; }
+}
