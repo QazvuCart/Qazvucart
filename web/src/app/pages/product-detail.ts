@@ -8,12 +8,13 @@ import { ProductDetail, formatMinor } from '../core/product.model';
 import { ProductsService } from '../core/products.service';
 import { Seo } from '../core/seo';
 import { NotFound } from './not-found';
+import { OrderForm } from './order-form';
 
 type State = { status: 'loading' | 'ok' | 'notfound' | 'error'; product?: ProductDetail };
 
 @Component({
   selector: 'qz-product-detail',
-  imports: [RouterLink, NotFound],
+  imports: [RouterLink, NotFound, OrderForm],
   template: `
     @switch (state().status) {
       @case ('loading') { <section class="container-qz py-16"><div class="aspect-[4/5] md:aspect-[16/9] rounded-2xl bg-sage-soft"></div></section> }
@@ -96,6 +97,7 @@ type State = { status: 'loading' | 'ok' | 'notfound' | 'error'; product?: Produc
                     <textarea id="note" rows="4" maxlength="500" [value]="note()" (input)="note.set($any($event.target).value)"
                               class="mt-2 w-full rounded-xl border-2 border-forest/30 bg-porcelain p-3"></textarea>
                     <p class="text-sm text-right">{{ note().length }}/500</p>
+                    <p class="text-sm">To use your own image, send it in the WhatsApp chat after your order request. Images cannot be uploaded on this page.</p>
                   </div>
                 }
 
@@ -113,6 +115,9 @@ type State = { status: 'loading' | 'ok' | 'notfound' | 'error'; product?: Produc
                     @if (missing().length) { <p class="mt-3 font-medium">Choose: {{ missing().join(', ') }}</p> }
                   }
                 </div>
+
+                <qz-order-form [product]="p" [selections]="selections()" [unitMinor]="unit()" [qty]="qty()"
+                               [canOrder]="canOrder()" [missing]="missing()" [note]="p.customisable ? note() : ''" />
               </div>
             </div>
           </section>
@@ -162,7 +167,8 @@ export class ProductDetailPage {
     return total;
   });
   subtotal = computed(() => (this.unit() === null ? null : this.unit()! * this.qty()));
-  /** True when every required choice is made and a price exists. Phase 5 uses this to enable ordering. */
+  selections = computed(() => this.groups().map((g) => ({ name: g.name, value: this.selected()[g.name] ?? '' })).filter((s) => s.value));
+  /** True when every required choice is made and a price exists. Enables the WhatsApp order button. */
   canOrder = computed(() => this.unit() !== null && this.missing().length === 0 && this.qty() >= 1);
 
   constructor() {

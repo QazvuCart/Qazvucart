@@ -1,5 +1,6 @@
 import { and, asc, desc, eq, ilike, inArray, isNotNull, isNull, or, sql, count } from 'drizzle-orm';
 import { Router } from 'express';
+import rateLimit from 'express-rate-limit';
 import { z } from 'zod';
 import { requireAdmin } from '../auth.js';
 import { Asset, destroyAssets, signUpload, verifyAsset } from '../cloudinary.js';
@@ -199,7 +200,8 @@ adminRouter.delete('/products/:id', async (req, res, next) => {
 });
 
 // ---------- uploads ----------
-adminRouter.post('/uploads/sign', (_req, res, next) => { try { res.json(signUpload()); } catch (e) { next(e); } });
+const signLimiter = rateLimit({ windowMs: 60_000, limit: 30, standardHeaders: true, legacyHeaders: false, message: { error: 'Too many upload requests. Try again shortly.' } });
+adminRouter.post('/uploads/sign', signLimiter, (_req, res, next) => { try { res.json(signUpload()); } catch (e) { next(e); } });
 
 // ---------- settings ----------
 adminRouter.get('/settings', async (_req, res, next) => {
