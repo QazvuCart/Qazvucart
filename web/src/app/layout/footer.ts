@@ -9,7 +9,7 @@ import { RouterLink } from '@angular/router';
       <div class="container-qz py-12 grid gap-10 md:grid-cols-[1.4fr_1fr]">
         <div>
           <p class="font-display text-3xl font-bold">QazvuCart</p>
-          <p class="mt-3 max-w-md text-porcelain/80">A creative collection of printed pieces, personalised details and everyday finds. Order requests and payment coordination happen directly through WhatsApp.</p>
+          <p class="mt-3 max-w-md text-porcelain/80">Printed wall posters and custom mobile phone cases. Orders are requested here and confirmed with you on WhatsApp.</p>
         </div>
         <nav aria-label="Policies" class="flex flex-col">
           @for (p of policies; track p.slug) {

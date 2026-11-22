@@ -20,6 +20,13 @@ Status: Phases 1-5 built (foundation, design system, storefront, admin, WhatsApp
 - Public API returns only customer-facing fields of active, non-archived products.
 - Future multi-vendor: add a nullable `vendor_id` to `products` later; no marketplace code in V1.
 
+## Spatial grid and motion (v2)
+- `web/src/app/shared/spatial-grid.ts` is the product gallery: 3 columns on tablet/desktop, 2 on phones, bent around the viewer in 3D. Styles are the `.sg-*` rules in `web/src/styles.css`.
+- `web/src/app/shared/motion.ts` holds all motion logic (no Angular imports): the curved-grid engine, the coming/going reveal, pointer tilt and desktop wheel smoothing. `motion-directives.ts` exposes them as `qzReveal`, `qzRevealDelay` and `qzTilt`.
+- Performance rules: only transform and opacity animate; one passive scroll listener and one rAF loop that sleeps when idle; only cards near the viewport are updated. Phones skip the scroll-linked sheen/shadow variables (measured about 2x frame time on a throttled phone) and keep native touch scrolling. Wheel smoothing is desktop-mouse only.
+- `prefers-reduced-motion` turns every effect off and leaves content in its normal state. Nothing is hidden until JavaScript is running, so server-rendered pages stay readable.
+- To tune the feel, edit `poseFor()` in `motion.ts` (tilt, depth, parallax, fade) and the `.sg-*` entrance rules in `styles.css`.
+
 ## Phase 3: storefront
 - Routes: `/`, `/products` (search, category, sort via query string), `/categories/:slug`, `/products/:slug`, `/about`, `/contact`, `/policies/:slug`.
 - Server-side rendering is on. Production: `npm run build`, then `npm run start:api:prod` and `npm run start:web:prod`.
@@ -60,7 +67,7 @@ Create a PostgreSQL database, then two Web Services from this repo.
 **Web service** (Root Directory `web`)
 - Build: `npm install --include=dev && npm run build`
 - Start: `npm run serve:ssr`
-- Env: `NODE_VERSION=22`, `API_ORIGIN` (the API's internal URL, e.g. http://qazvucart-api:10000), `PUBLIC_SITE_URL` (the public https URL).
+- Env: `NODE_VERSION=22`, `ALLOWED_HOSTS` (only if you use a custom domain; the onrender.com host is allowed automatically), `API_ORIGIN` (the API's internal URL, e.g. http://qazvucart-api:10000), `PUBLIC_SITE_URL` (the public https URL).
 
 Create the admin once from the API service's Shell: `ADMIN_EMAIL=you@example.com ADMIN_PASSWORD='long passphrase' node dist/scripts/create-admin.js`
 
@@ -94,15 +101,24 @@ There is no payment gateway and no order storage. The product page collects the 
 8. Stop PostgreSQL: public pages show the error state, not a stack trace.
 9. Check for horizontal scroll at 360px width.
 
-## Design update — animated spatial storefront
-The storefront has been updated with a broader creative-commerce identity rather than being positioned only around posters and phone cases.
+## Deploying on Render's free plan (one service, no shell)
+The free plan has no Shell tab and sleeps after inactivity (the first request afterwards can take ~50 s). Everything is configured with environment variables, and one service runs both the API and the website.
 
-- The home hero uses a self-contained CSS 3D composition (orbits, layered discs, floating tiles, cubes and spheres). It does not require product records or product photography to render.
-- The homepage collection area is populated from active categories returned by the API. It does not invent category names or show empty categories as available collections.
-- The featured product grid continues to use real Cloudinary product images. If an image is absent, it shows a clearly abstract decorative placeholder rather than fabricated product photography.
-- Product cards include restrained 3D pointer tilt, image zoom and hover elevation. Motion is reduced when the visitor has `prefers-reduced-motion` enabled.
-- Brand copy is now broad enough for additional lifestyle and personalised product categories. Categories and product variants remain administrator-managed; no example categories or products are seeded.
-- Ordering remains WhatsApp-only. There is no payment gateway, online payment state or automatic order confirmation.
+- **Build command:** `npm --prefix api install --include=dev && npm --prefix web install --include=dev && npm run build`
+- **Start command:** `npm start` (applies migrations, then starts the API on internal port 4000 and the website on Render's `$PORT`)
+- **Environment variables** (set them as secrets in the dashboard; never commit them):
 
-### Validation note
-The supplied environment used Node 22.16.0. The existing test setup requires Node 22.18+ for native TypeScript module loading, and dependency installation did not complete in this environment. Run the documented install/build/test commands locally with Node 22.18+ or Node 20.19+ with compatible test tooling before deployment. A successful production build has not been claimed for this edited archive.
+| Variable | Purpose |
+| --- | --- |
+| `NODE_VERSION` | `22` |
+| `NODE_ENV` | `production` (makes the session cookie Secure) |
+| `DATABASE_URL` | Render PostgreSQL internal connection string |
+| `SESSION_SECRET` | 32+ random characters |
+| `ADMIN_EMAIL`, `ADMIN_PASSWORD` | Admin login, created/updated at every start (password 12+ characters). Changing the password signs the admin out everywhere. |
+| `WHATSAPP_NUMBER` | Digits with country code, e.g. `919876543210` (Admin > Settings overrides it) |
+| `INSTAGRAM_URL` | Optional, https link |
+| `CLOUDINARY_CLOUD_NAME`, `CLOUDINARY_API_KEY`, `CLOUDINARY_API_SECRET` | Image uploads |
+| `PUBLIC_SITE_URL` | Your `https://….onrender.com` address (sitemap and product links) |
+| `ALLOWED_HOSTS` | Only for a custom domain |
+
+Render's free PostgreSQL databases expire after a limited period (check Render's current terms); export or upgrade before then.

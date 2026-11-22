@@ -8,6 +8,7 @@
     "migrate": "npm --prefix api run migrate",
     "build": "npm --prefix api run build && npm --prefix web run build",
     "start:web:prod": "npm --prefix web run serve:ssr",
-    "start:api:prod": "npm --prefix api run start"
+    "start:api:prod": "npm --prefix api run start",
+    "start": "node scripts/start.mjs"
   }
 }

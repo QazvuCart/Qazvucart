@@ -6,6 +6,9 @@ const schema = z.object({
   NODE_ENV: z.enum(['development', 'production', 'test']).default('development'),
   DATABASE_URL: z.string().url(),
   SESSION_SECRET: z.string().min(32),
+  // Optional: creates/updates the admin at startup (for hosts with no shell). Password stays in the host's secret env only.
+  ADMIN_EMAIL: z.string().optional(),
+  ADMIN_PASSWORD: z.string().optional(),
   // Optional public contact defaults. Admin settings (site_settings) override them.
   WHATSAPP_NUMBER: z.string().optional(),
   INSTAGRAM_URL: z.string().optional(),

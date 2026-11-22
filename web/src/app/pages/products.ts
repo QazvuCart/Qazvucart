@@ -49,8 +49,8 @@ type State = { status: 'loading' | 'ok' | 'error'; items: ProductCard[] };
       <div class="mt-10" [attr.aria-busy]="state().status === 'loading'">
         @switch (state().status) {
           @case ('loading') {
-            <div class="grid grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6">
-              @for (i of [1, 2, 3, 4]; track i) { <div class="aspect-[4/5] rounded-2xl bg-sage-soft"></div> }
+            <div class="grid grid-cols-2 md:grid-cols-3 gap-4 md:gap-9">
+              @for (i of [1, 2, 3]; track i) { <div [class]="'aspect-[4/5] rounded-3xl bg-sage-soft animate-pulse' + (i === 3 ? ' hidden md:block' : '')"></div> }
             </div>
           }
           @case ('error') { <qz-empty-catalogue [failed]="true" /> }
@@ -98,7 +98,7 @@ export class Products {
 
   constructor() {
     const seo = inject(Seo);
-    seo.set({ title: 'Products — QazvuCart', description: 'Explore the QazvuCart collection of creative, printed and personalised products.', path: '/products' });
+    seo.set({ title: 'Products — QazvuCart', description: 'Browse QazvuCart wall posters and custom mobile phone cases.', path: '/products' });
   }
 
   chip(active: boolean) {

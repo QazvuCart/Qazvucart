@@ -3,6 +3,7 @@ import express, { type NextFunction, type Request, type Response } from 'express
 import rateLimit from 'express-rate-limit';
 import helmet from 'helmet';
 import { z } from 'zod';
+import { ensureAdminFromEnv } from './bootstrap-admin.js';
 import { env } from './env.js';
 import { HttpError } from './http-error.js';
 import { adminAuthRouter } from './routes/admin-auth.js';
@@ -31,4 +32,7 @@ app.use((err: unknown, _req: Request, res: Response, _next: NextFunction) => {
   res.status(500).json({ error: 'Something went wrong' });
 });
 
-app.listen(env.PORT, () => console.log(`API listening on :${env.PORT}`));
+app.listen(env.PORT, () => {
+  console.log(`API listening on :${env.PORT}`);
+  ensureAdminFromEnv().catch((e) => console.error('Admin bootstrap failed:', e instanceof Error ? e.message : 'unknown error'));
+});

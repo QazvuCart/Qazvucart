@@ -10,7 +10,15 @@ const xml = (s: string) => s.replace(/[<>&'"]/g, (c) => ({ '<': '&lt;', '>': '&g
 
 const app = express();
 app.set('trust proxy', 1);
-const angular = new AngularNodeAppEngine();
+
+// Angular SSR only renders for hosts on this allow-list (protection against forged Host headers).
+// Render sets RENDER_EXTERNAL_HOSTNAME itself; PUBLIC_SITE_URL's host and extra ALLOWED_HOSTS (comma separated) are added.
+const hostOf = (u: string) => { try { return new URL(u).hostname; } catch { return ''; } };
+const allowedHosts = [...new Set([
+  'localhost', '127.0.0.1', hostOf(siteUrl), process.env['RENDER_EXTERNAL_HOSTNAME'] ?? '',
+  ...(process.env['ALLOWED_HOSTS'] ?? '').split(','),
+].map((h) => h.trim()).filter(Boolean))];
+const angular = new AngularNodeAppEngine({ allowedHosts });
 
 app.get('/robots.txt', (_req, res) => {
   res.type('text/plain').send(`User-agent: *\nAllow: /\nDisallow: /admin\nSitemap: ${siteUrl}/sitemap.xml\n`);
