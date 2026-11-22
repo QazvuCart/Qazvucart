@@ -98,7 +98,7 @@ export class Products {
 
   constructor() {
     const seo = inject(Seo);
-    seo.set({ title: 'Products — QazvuCart', description: 'Browse QazvuCart wall posters and custom mobile phone cases.', path: '/products' });
+    seo.set({ title: 'Products — QazvuCart', description: 'Explore the QazvuCart collection of creative, printed and personalised products.', path: '/products' });
   }
 
   chip(active: boolean) {

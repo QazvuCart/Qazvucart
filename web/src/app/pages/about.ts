@@ -13,7 +13,7 @@ import { Seo } from '../core/seo';
       <h1 class="text-4xl md:text-6xl">About QazvuCart</h1>
       <div class="mt-8 max-w-prose space-y-4 text-lg">
         @for (p of text(); track $index) { <p>{{ p }}</p> }
-        @empty { <p>QazvuCart sells printed wall posters and custom mobile phone cases. More about the brand will be added here.</p> }
+        @empty { <p>QazvuCart is a creative-commerce brand for printed pieces, personalised details and everyday finds. More about the brand will be added here.</p> }
       </div>
     </section>
   `,

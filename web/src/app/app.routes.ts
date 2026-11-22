@@ -2,7 +2,7 @@ import { Routes } from '@angular/router';
 import { adminGuard } from './core/admin-auth';
 
 export const routes: Routes = [
-  { path: '', title: 'QazvuCart — wall posters and custom phone cases', loadComponent: () => import('./pages/home').then((m) => m.Home) },
+  { path: '', title: 'QazvuCart — creative finds, made personal', loadComponent: () => import('./pages/home').then((m) => m.Home) },
   { path: 'products', loadComponent: () => import('./pages/products').then((m) => m.Products) },
   { path: 'products/:slug', loadComponent: () => import('./pages/product-detail').then((m) => m.ProductDetailPage) },
   { path: 'categories/:slug', loadComponent: () => import('./pages/products').then((m) => m.Products) },

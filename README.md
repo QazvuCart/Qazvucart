@@ -93,3 +93,16 @@ There is no payment gateway and no order storage. The product page collects the 
 7. Visit `/admin` logged out: redirected to login; `curl /api/admin/products` returns 401.
 8. Stop PostgreSQL: public pages show the error state, not a stack trace.
 9. Check for horizontal scroll at 360px width.
+
+## Design update — animated spatial storefront
+The storefront has been updated with a broader creative-commerce identity rather than being positioned only around posters and phone cases.
+
+- The home hero uses a self-contained CSS 3D composition (orbits, layered discs, floating tiles, cubes and spheres). It does not require product records or product photography to render.
+- The homepage collection area is populated from active categories returned by the API. It does not invent category names or show empty categories as available collections.
+- The featured product grid continues to use real Cloudinary product images. If an image is absent, it shows a clearly abstract decorative placeholder rather than fabricated product photography.
+- Product cards include restrained 3D pointer tilt, image zoom and hover elevation. Motion is reduced when the visitor has `prefers-reduced-motion` enabled.
+- Brand copy is now broad enough for additional lifestyle and personalised product categories. Categories and product variants remain administrator-managed; no example categories or products are seeded.
+- Ordering remains WhatsApp-only. There is no payment gateway, online payment state or automatic order confirmation.
+
+### Validation note
+The supplied environment used Node 22.16.0. The existing test setup requires Node 22.18+ for native TypeScript module loading, and dependency installation did not complete in this environment. Run the documented install/build/test commands locally with Node 22.18+ or Node 20.19+ with compatible test tooling before deployment. A successful production build has not been claimed for this edited archive.
