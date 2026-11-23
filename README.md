@@ -21,8 +21,8 @@ Status: Phases 1-5 built (foundation, design system, storefront, admin, WhatsApp
 - Future multi-vendor: add a nullable `vendor_id` to `products` later; no marketplace code in V1.
 
 ## Home hero and motion
-- The product grid (`web/src/app/shared/spatial-grid.ts`) is the original asymmetric bento grid.
-- The three frames in the home hero show the 3 newest products that have a photo. Every ~3.6 s they swap places in 3D (back-left, back-right, front). Positions are the `.frame-stack .f[data-pos]` rules in `web/src/styles.css`; the timer is in `web/src/app/pages/home.ts`.
+- The product grid (`web/src/app/shared/spatial-grid.ts`) keeps the original card style but every card is the same compact size (2 / 3 / 4 columns), images are shown whole, cards ease in on scroll.
+- The three frames in the home hero show the 3 newest products that have a photo. Every ~7 s they swap places in 3D (back-left, back-right, front). Positions are the `.frame-stack .f[data-pos]` rules in `web/src/styles.css`; the timer is in `web/src/app/pages/home.ts`.
 - `web/src/app/shared/motion.ts` and `motion-directives.ts` hold the scroll reveal (`qzReveal`), mouse tilt (`qzTilt`) and desktop wheel smoothing. `prefers-reduced-motion` turns all of it off.
 - The product page shows the whole photo (never cropped), reduced in size; tap it for a full-screen viewer.
 

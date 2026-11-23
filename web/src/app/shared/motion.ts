@@ -293,7 +293,7 @@ export function initSmoothScroll(enabled: () => boolean = () => true): () => voi
   const step = (now: number) => {
     const dt = Math.min(48, now - last);
     last = now;
-    cur += (target - cur) * (1 - Math.exp(-dt / 90));
+    cur += (target - cur) * (1 - Math.exp(-dt / 130)); // longer time constant = slower, silkier glide
     if (Math.abs(target - cur) < 0.4) cur = target;
     scrollTo({ top: cur, left: 0, behavior: 'instant' as ScrollBehavior });
     raf = cur === target ? 0 : requestAnimationFrame(step);

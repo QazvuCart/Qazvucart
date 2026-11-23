@@ -49,7 +49,7 @@ type State = { status: 'loading' | 'ok' | 'error'; items: ProductCard[] };
       <div class="mt-10" [attr.aria-busy]="state().status === 'loading'">
         @switch (state().status) {
           @case ('loading') {
-            <div class="grid grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6">
+            <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 md:gap-5">
               @for (i of [1, 2, 3, 4]; track i) { <div class="aspect-[4/5] rounded-2xl bg-sage-soft"></div> }
             </div>
           }

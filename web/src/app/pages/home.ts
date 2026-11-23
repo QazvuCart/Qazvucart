@@ -81,7 +81,7 @@ export class Home {
   private api = inject(ProductsService);
   featured = signal<ProductCard[]>([]);
   hero = signal<ProductCard[]>([]);   // up to 3 newest products that have a photo, shown in the hero frames
-  shift = signal(0);                  // every few seconds the three frames swap places in 3D
+  shift = signal(0);                  // every ~7 s the three frames swap places in 3D
   cld = cld;
   srcset = srcset;
   loading = signal(true);
@@ -91,7 +91,7 @@ export class Home {
     const destroyRef = inject(DestroyRef);
     afterNextRender(() => {
       if (matchMedia('(prefers-reduced-motion: reduce)').matches) return;
-      const t = setInterval(() => { if (!document.hidden) this.shift.update((n) => n + 1); }, 3600);
+      const t = setInterval(() => { if (!document.hidden) this.shift.update((n) => n + 1); }, 7000);
       destroyRef.onDestroy(() => clearInterval(t));
     });
     this.api.list().subscribe({ next: (items) => this.hero.set(items.filter((i) => i.image).slice(0, 3)), error: () => undefined });
