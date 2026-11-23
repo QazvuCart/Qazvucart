@@ -4,18 +4,20 @@ import { toObservable, toSignal } from '@angular/core/rxjs-interop';
 import { RouterLink } from '@angular/router';
 import { catchError, map, of, startWith, switchMap } from 'rxjs';
 import { cld, srcset } from '../core/cloudinary';
-import { ProductDetail, formatMinor } from '../core/product.model';
+import { ProductCard, ProductDetail, formatMinor } from '../core/product.model';
 import { ProductsService } from '../core/products.service';
 import { Seo } from '../core/seo';
 import { NotFound } from './not-found';
 import { OrderForm } from './order-form';
-import { Tilt } from '../shared/motion-directives';
+import { Reveal, Tilt } from '../shared/motion-directives';
+import { ShareButton } from '../shared/share-button';
+import { SpatialGrid } from '../shared/spatial-grid';
 
 type State = { status: 'loading' | 'ok' | 'notfound' | 'error'; product?: ProductDetail };
 
 @Component({
   selector: 'qz-product-detail',
-  imports: [RouterLink, NotFound, OrderForm, Tilt],
+  imports: [RouterLink, NotFound, OrderForm, Tilt, Reveal, ShareButton, SpatialGrid],
   host: { '(document:keydown)': 'key($event)' },
   template: `
     @switch (state().status) {
@@ -29,15 +31,15 @@ type State = { status: 'loading' | 'ok' | 'notfound' | 'error'; product?: Produc
       }
       @default {
         @if (state().product; as p) {
-          <section class="container-qz py-8 md:py-14">
-            <nav aria-label="Breadcrumb" class="text-sm mb-6">
+          <section class="container-qz py-6 md:py-12">
+            <nav aria-label="Breadcrumb" class="text-sm mb-4">
               <a routerLink="/products" class="underline underline-offset-4">Products</a>
               @if (p.category) { <span> / </span><a [routerLink]="['/categories', p.category.slug]" class="underline underline-offset-4">{{ p.category.name }}</a> }
             </nav>
 
-            <div class="grid gap-10 md:grid-cols-[1.1fr_1fr] items-start">
-              <!-- Gallery: whole image is always visible (never cropped); tap it for full screen. -->
-              <div>
+            <div class="grid gap-8 md:gap-12 md:grid-cols-[1.1fr_1fr] items-start">
+              <!-- Gallery: whole image is always visible (never cropped); tap it for full screen. Stays in view beside the options on desktop. -->
+              <div class="md:sticky md:top-24">
                 <div class="pd-stage">
                   @if (p.images[activeImg()]; as img) {
                     <button type="button" class="pd-open tilt" qzTilt="3" (click)="openZoom()" aria-label="View image full screen">
@@ -72,9 +74,12 @@ type State = { status: 'loading' | 'ok' | 'notfound' | 'error'; product?: Produc
               <div>
                 <h1 class="text-4xl md:text-5xl">{{ p.name }}</h1>
                 <p class="mt-2 text-sm">Product ID: {{ p.productCode }}</p>
-                <p class="mt-4 text-3xl font-display font-bold">
-                  @if (p.priceMinor !== null) { {{ money(p.priceMinor) }} } @else { <span class="text-xl font-medium">Price not set yet</span> }
-                </p>
+                <div class="mt-4 flex items-center justify-between gap-4">
+                  <p class="text-3xl font-display font-bold">
+                    @if (p.priceMinor !== null) { {{ money(p.priceMinor) }} } @else { <span class="text-xl font-medium">Price not set yet</span> }
+                  </p>
+                  <qz-share [path]="'/products/' + enc(p.slug)" [title]="p.name" />
+                </div>
                 @if (p.description) { <p class="mt-4 max-w-prose whitespace-pre-line">{{ p.description }}</p> }
 
                 @for (g of groups(); track g.name) {
@@ -134,6 +139,18 @@ type State = { status: 'loading' | 'ok' | 'notfound' | 'error'; product?: Produc
             </div>
           </section>
 
+          @if (related().length) {
+            <section class="bg-sage py-12 md:py-16 mt-6" aria-labelledby="more-h">
+              <div class="container-qz">
+                <div class="flex items-end justify-between gap-4">
+                  <h2 id="more-h" qzReveal class="text-2xl md:text-4xl">Keep exploring</h2>
+                  <a routerLink="/products" class="btn btn-quiet btn-sm">See all</a>
+                </div>
+                <div class="mt-6"><qz-spatial-grid [products]="related()" /></div>
+              </div>
+            </section>
+          }
+
           @if (zoom()) {
             <div class="lb" role="dialog" aria-modal="true" aria-label="Image viewer" (click)="closeZoom()" (touchstart)="swipeStart($event)" (touchend)="swipeEnd($event, p.images.length)">
               <button type="button" class="lb-btn lb-close" (click)="closeZoom(); $event.stopPropagation()" aria-label="Close full screen view">
@@ -177,6 +194,26 @@ export class ProductDetailPage {
       )),
     ),
     { initialValue: { status: 'loading' } as State },
+  );
+
+  enc = encodeURIComponent;
+
+  /** More from the same category (topped up from the whole catalogue), so a product page is never a dead end. */
+  related = toSignal(
+    toObservable(this.state).pipe(
+      switchMap((s) => {
+        const p = s.product;
+        if (!p) return of([] as ProductCard[]);
+        const others = (l: ProductCard[]) => l.filter((x) => x.slug !== p.slug);
+        return this.api.list(p.category ? { category: p.category.slug } : {}).pipe(
+          map(others),
+          switchMap((l) => (l.length >= 4 ? of(l) : this.api.list().pipe(map(others)))),
+          map((l) => l.slice(0, 10)),
+          catchError(() => of([] as ProductCard[])),
+        );
+      }),
+    ),
+    { initialValue: [] as ProductCard[] },
   );
 
   activeImg = signal(0);

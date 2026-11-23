@@ -4,20 +4,26 @@ import { NavigationEnd, Router, RouterOutlet } from '@angular/router';
 import { filter, map, startWith } from 'rxjs';
 import { Header } from './layout/header';
 import { Footer } from './layout/footer';
+import { Tabbar } from './layout/tabbar';
+import { ShareService } from './core/share';
 import { initSmoothScroll } from './shared/motion';
 
 @Component({
   selector: 'qz-root',
-  imports: [RouterOutlet, Header, Footer],
+  imports: [RouterOutlet, Header, Footer, Tabbar],
   template: `
     <a href="#main" class="sr-only focus:not-sr-only focus:fixed focus:left-3 focus:top-3 focus:z-50 focus:bg-porcelain focus:p-3 focus:rounded">Skip to content</a>
     @if (!isAdmin()) { <qz-header /> }
     <main id="main"><router-outlet /></main>
-    @if (!isAdmin()) { <qz-footer /> }
+    @if (!isAdmin()) { <qz-footer /> <qz-tabbar /> }
+    <div role="status" aria-live="polite" class="toast-wrap">
+      @if (share.toastMsg(); as m) { <div class="toast" [class.out]="!share.toastOn()">{{ m }}</div> }
+    </div>
   `,
 })
 export class Root {
   private router = inject(Router);
+  share = inject(ShareService);
 
   constructor() {
     const destroyRef = inject(DestroyRef);

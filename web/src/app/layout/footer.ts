@@ -6,7 +6,7 @@ import { RouterLink } from '@angular/router';
   imports: [RouterLink],
   template: `
     <footer class="bg-forest text-porcelain mt-24">
-      <div class="container-qz py-12 grid gap-10 md:grid-cols-[1.4fr_1fr]">
+      <div class="container-qz pt-12 pb-28 md:pb-12 grid gap-10 md:grid-cols-[1.4fr_1fr]">
         <div>
           <p class="font-display text-3xl font-bold">QazvuCart</p>
           <p class="mt-3 max-w-md text-porcelain/80">Printed wall posters and custom mobile phone cases. Orders are requested here and confirmed with you on WhatsApp.</p>

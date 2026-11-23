@@ -6,12 +6,13 @@ import { ProductsService } from '../core/products.service';
 import { EmptyCatalogue } from '../shared/empty-catalogue';
 import { SpatialGrid } from '../shared/spatial-grid';
 import { Reveal, Tilt } from '../shared/motion-directives';
+import { ShareButton } from '../shared/share-button';
 
 @Component({
   selector: 'qz-home',
-  imports: [RouterLink, SpatialGrid, EmptyCatalogue, Reveal, Tilt],
+  imports: [RouterLink, SpatialGrid, EmptyCatalogue, Reveal, Tilt, ShareButton],
   template: `
-    <section class="container-qz grid md:grid-cols-[1.15fr_1fr] gap-12 items-center py-14 md:py-24">
+    <section class="container-qz grid md:grid-cols-[1.15fr_1fr] gap-10 items-center py-10 md:py-20">
       <div>
         <h1 class="rise text-[clamp(2.6rem,8vw,5.4rem)]">Prints for your wall. Cases for your phone.</h1>
         <p class="rise mt-6 text-lg max-w-[34rem]" style="--d: 140ms">QazvuCart sells printed wall posters and custom mobile phone cases. Pick a product, add your details, and send your order request on WhatsApp.</p>
@@ -35,10 +36,10 @@ import { Reveal, Tilt } from '../shared/motion-directives';
       </div>
     </section>
 
-    <section class="bg-sage py-16 md:py-24 overflow-x-clip" aria-labelledby="collections">
+    <section class="bg-sage py-12 md:py-20 overflow-x-clip" aria-labelledby="collections">
       <div class="container-qz">
         <h2 id="collections" qzReveal class="text-3xl md:text-5xl">Two collections</h2>
-        <div class="mt-10 grid md:grid-cols-[1.3fr_1fr] gap-6 md:gap-8">
+        <div class="mt-8 grid md:grid-cols-[1.3fr_1fr] gap-6 md:gap-8">
           <div qzReveal="left">
             <a routerLink="/products" qzTilt="4" class="tilt glare group block rounded-3xl bg-porcelain shadow-lift p-8 md:p-10 min-h-56 no-underline text-forest">
               <h3 class="text-2xl md:text-3xl">Wall posters</h3>
@@ -57,16 +58,25 @@ import { Reveal, Tilt } from '../shared/motion-directives';
       </div>
     </section>
 
-    <section class="container-qz py-16 md:py-24" aria-labelledby="featured">
-      <h2 id="featured" qzReveal class="text-3xl md:text-5xl">Featured</h2>
-      <div class="mt-10">
+    <section class="container-qz py-12 md:py-20" aria-labelledby="featured">
+      <div class="flex items-end justify-between gap-4">
+        <h2 id="featured" qzReveal class="text-3xl md:text-5xl">Featured</h2>
+        @if (featured().length) { <a routerLink="/products" class="btn btn-quiet btn-sm shrink-0">See all</a> }
+      </div>
+      <div class="mt-6">
         @if (loading()) { <p>Loading products…</p> }
         @else if (featured().length) { <qz-spatial-grid [products]="featured()" /> }
         @else { <qz-empty-catalogue [failed]="failed()" /> }
       </div>
+      @if (featured().length) {
+        <div qzReveal class="mt-8 flex flex-wrap items-center gap-3">
+          <a routerLink="/products" class="btn btn-primary">Keep browsing</a>
+          <qz-share path="/" title="QazvuCart" label="Share the store" />
+        </div>
+      }
     </section>
 
-    <section id="customise" class="bg-sage-soft py-16 md:py-24" aria-labelledby="custom-h">
+    <section id="customise" class="bg-sage-soft py-12 md:py-20" aria-labelledby="custom-h">
       <div class="container-qz grid md:grid-cols-2 gap-10">
         <h2 id="custom-h" qzReveal class="text-3xl md:text-5xl">Make it yours</h2>
         <div class="space-y-4 text-lg">

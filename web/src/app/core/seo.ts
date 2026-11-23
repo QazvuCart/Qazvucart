@@ -14,6 +14,8 @@ export class Seo {
     this.meta.updateTag({ property: 'og:title', content: o.title });
     this.meta.updateTag({ property: 'og:description', content: o.description });
     this.meta.updateTag({ property: 'og:type', content: 'website' });
+    this.meta.updateTag({ property: 'og:site_name', content: 'QazvuCart' });
+    this.meta.updateTag({ name: 'twitter:card', content: o.image ? 'summary_large_image' : 'summary' });
     this.meta.updateTag({ property: 'og:url', content: this.site + o.path });
     if (o.image) this.meta.updateTag({ property: 'og:image', content: o.image });
     else this.meta.removeTag("property='og:image'");

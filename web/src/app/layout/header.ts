@@ -1,5 +1,6 @@
-import { Component, signal } from '@angular/core';
-import { RouterLink, RouterLinkActive } from '@angular/router';
+import { Component, inject, signal } from '@angular/core';
+import { Router, RouterLink, RouterLinkActive } from '@angular/router';
+import { ShareService } from '../core/share';
 
 @Component({
   selector: 'qz-header',
@@ -17,6 +18,10 @@ import { RouterLink, RouterLinkActive } from '@angular/router';
                [routerLinkActiveOptions]="{ exact: true }" class="py-3 font-medium no-underline text-forest">{{ l.label }}</a>
           }
         </nav>
+
+        <button type="button" class="hidden md:grid size-11 place-items-center rounded-full hover:bg-sage-soft transition-colors" (click)="shareThis()" aria-label="Share this page">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="18" cy="5" r="2.6"/><circle cx="6" cy="12" r="2.6"/><circle cx="18" cy="19" r="2.6"/><path d="M8.3 10.8l7.4-4.6M8.3 13.2l7.4 4.6"/></svg>
+        </button>
 
         <button type="button" class="md:hidden size-12 grid place-items-center -mr-2" (click)="open.set(!open())"
                 [attr.aria-expanded]="open()" aria-controls="mobile-nav" aria-label="Menu">
@@ -39,7 +44,10 @@ import { RouterLink, RouterLinkActive } from '@angular/router';
   `,
 })
 export class Header {
+  private share = inject(ShareService);
+  private router = inject(Router);
   open = signal(false);
+  shareThis() { this.share.quick(document.title, this.router.url.split('#')[0]); }
   links = [
     { path: '/products', label: 'Shop' },
     { path: '/about', label: 'About' },

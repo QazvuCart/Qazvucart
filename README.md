@@ -26,6 +26,13 @@ Status: Phases 1-5 built (foundation, design system, storefront, admin, WhatsApp
 - `web/src/app/shared/motion.ts` and `motion-directives.ts` hold the scroll reveal (`qzReveal`), mouse tilt (`qzTilt`) and desktop wheel smoothing. `prefers-reduced-motion` turns all of it off.
 - The product page shows the whole photo (never cropped), reduced in size; tap it for a full-screen viewer.
 
+## Spatial grid, sharing and flow
+- Grid (`shared/spatial-grid.ts`, styles `.sg*` in `styles.css`): 2 / 3 / 5 columns, square cards with a floating glass label, about 20% shorter than before.
+- `/products` loads 10 at a time as you scroll (`qzInView` in `motion-directives.ts`); the end of the list offers Share and Back to top. Product pages end with a "Keep exploring" grid.
+- Phone bottom bar (`layout/tabbar.ts`): Home, Shop, Share (current page), Contact.
+- Share links (`core/share.ts`, `shared/share-button.ts`): native share sheet where available, WhatsApp, copy link. Links use `SITE_URL` (set `PUBLIC_SITE_URL` in production) and the pages already emit Open Graph tags for previews.
+- Fades are limited to cards, section headings, the share menu and the toast.
+
 ## Phase 3: storefront
 - Routes: `/`, `/products` (search, category, sort via query string), `/categories/:slug`, `/products/:slug`, `/about`, `/contact`, `/policies/:slug`.
 - Server-side rendering is on. Production: `npm run build`, then `npm run start:api:prod` and `npm run start:web:prod`.
