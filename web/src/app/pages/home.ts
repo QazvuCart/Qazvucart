@@ -1,6 +1,7 @@
-import { Component, inject, signal } from '@angular/core';
+import { Component, DestroyRef, afterNextRender, inject, signal } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { ProductCard } from '../core/product.model';
+import { cld, srcset } from '../core/cloudinary';
 import { ProductsService } from '../core/products.service';
 import { EmptyCatalogue } from '../shared/empty-catalogue';
 import { SpatialGrid } from '../shared/spatial-grid';
@@ -19,7 +20,19 @@ import { Reveal, Tilt } from '../shared/motion-directives';
           <a href="#customise" class="btn btn-quiet">How customising works</a>
         </div>
       </div>
-      <div class="frame-stack" aria-hidden="true"><span class="f f1"></span><span class="f f2"></span><span class="f f3"></span><i class="dot"></i></div>
+      <div class="frame-stack" [attr.aria-hidden]="hero().length ? null : 'true'">
+        @for (i of [0, 1, 2]; track i) {
+          @if (hero()[i]; as p) {
+            @if (p.image; as img) {
+              <a class="f" [routerLink]="['/products', p.slug]" [attr.data-pos]="pos(i)" [attr.aria-label]="p.name">
+                <img [src]="cld(img.url, 640)" [attr.srcset]="srcset(img.url, [320, 640, 960])" sizes="(min-width: 768px) 14rem, 55vw"
+                     [alt]="img.alt" [attr.width]="img.width" [attr.height]="img.height" decoding="async">
+              </a>
+            }
+          } @else { <span class="f" [attr.data-pos]="pos(i)"></span> }
+        }
+        <i class="dot"></i>
+      </div>
     </section>
 
     <section class="bg-sage py-16 md:py-24 overflow-x-clip" aria-labelledby="collections">
@@ -67,13 +80,26 @@ import { Reveal, Tilt } from '../shared/motion-directives';
 export class Home {
   private api = inject(ProductsService);
   featured = signal<ProductCard[]>([]);
+  hero = signal<ProductCard[]>([]);   // up to 3 newest products that have a photo, shown in the hero frames
+  shift = signal(0);                  // every few seconds the three frames swap places in 3D
+  cld = cld;
+  srcset = srcset;
   loading = signal(true);
   failed = signal(false);
 
   constructor() {
+    const destroyRef = inject(DestroyRef);
+    afterNextRender(() => {
+      if (matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+      const t = setInterval(() => { if (!document.hidden) this.shift.update((n) => n + 1); }, 3600);
+      destroyRef.onDestroy(() => clearInterval(t));
+    });
+    this.api.list().subscribe({ next: (items) => this.hero.set(items.filter((i) => i.image).slice(0, 3)), error: () => undefined });
     this.api.list({ featured: true }).subscribe({
       next: (items) => { this.featured.set(items); this.loading.set(false); },
       error: () => { this.failed.set(true); this.loading.set(false); },
     });
   }
+
+  pos(i: number) { return (i + this.shift()) % 3; }
 }
