@@ -23,18 +23,29 @@ export interface Asset { secureUrl: string; width: number; height: number; forma
 /** The browser's Cloudinary upload response. Only trusted (after strict checks) when the Admin API is not configured. */
 export interface AssetHint { secureUrl: string; width: number; height: number; format: string }
 
-/** With the Admin API configured, ask Cloudinary what was really uploaded; otherwise validate the browser's hint. */
+function checkHint(publicId: string, hint?: AssetHint): Asset {
+  const okUrl = hint && hint.secureUrl.startsWith(`https://res.cloudinary.com/${env.CLOUDINARY_CLOUD_NAME}/image/upload/`) && hint.secureUrl.includes(publicId);
+  if (!hint || !okUrl || !ALLOWED_FORMATS.includes(hint.format)) throw new HttpError(400, 'Invalid image');
+  return { secureUrl: hint.secureUrl, width: hint.width, height: hint.height, format: hint.format };
+}
+
+/**
+ * With the Admin API configured, ask Cloudinary what was really uploaded. If that lookup fails (wrong key/secret for
+ * this cloud, delivery type, timing), the real reason is logged and the browser's upload response is used instead
+ * after strict checks, so a working unsigned upload is never blocked by the optional safety net.
+ */
 export async function verifyAsset(publicId: string, hint?: AssetHint): Promise<Asset> {
   if (!hasCloud) throw new HttpError(503, 'Cloudinary is not configured.');
   if (!publicId.startsWith(imageFolder + '/')) throw new HttpError(400, 'Invalid image');
-  if (!hasAdminApi) {
-    const okUrl = hint && hint.secureUrl.startsWith(`https://res.cloudinary.com/${env.CLOUDINARY_CLOUD_NAME}/image/upload/`) && hint.secureUrl.includes(publicId);
-    if (!hint || !okUrl || !ALLOWED_FORMATS.includes(hint.format)) throw new HttpError(400, 'Invalid image');
-    return { secureUrl: hint.secureUrl, width: hint.width, height: hint.height, format: hint.format };
-  }
+  if (!hasAdminApi) return checkHint(publicId, hint);
   let r;
   try { r = await cloudinary.api.resource(publicId, { resource_type: 'image' }); }
-  catch { throw new HttpError(400, 'Uploaded image was not found'); }
+  catch (e) {
+    const err = e as { error?: { message?: string; http_code?: number }; message?: string };
+    console.error(`Cloudinary Admin API lookup failed for "${publicId}" (${err.error?.http_code ?? '?'}): ${err.error?.message ?? err.message ?? 'unknown'}. ` +
+      'Check CLOUDINARY_CLOUD_NAME / API_KEY / API_SECRET belong to the same account. Using the browser upload response instead.');
+    return checkHint(publicId, hint);
+  }
   if (!ALLOWED_FORMATS.includes(r.format) || r.bytes > MAX_BYTES) {
     await cloudinary.uploader.destroy(publicId).catch(() => undefined);
     throw new HttpError(400, 'Image must be JPG, PNG or WebP and at most 8 MB');
