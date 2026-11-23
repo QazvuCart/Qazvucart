@@ -16,6 +16,8 @@ export interface AdminProduct {
 }
 export interface Stats { products: { total: number; active: number; inactive: number; archived: number }; categories: number; recent: { id: string; name: string; updatedAt: string }[]; }
 
+interface UploadConfig { cloudName: string; uploadPreset: string; folder: string; allowed_formats: string; maxBytes: number; }
+
 @Injectable({ providedIn: 'root' })
 export class AdminApi {
   private http = inject(HttpClient);
@@ -36,17 +38,20 @@ export class AdminApi {
   settings() { return this.http.get<Record<string, string>>(`${this.b}/settings`); }
   saveSettings(body: Record<string, string>) { return this.http.put(`${this.b}/settings`, body); }
 
-  /** Validates the file, gets a server signature, then uploads straight to Cloudinary. The server re-checks the asset on save. */
-  async uploadImage(file: File): Promise<{ publicId: string; url: string }> {
+  private uploadCfg?: Promise<UploadConfig>;
+
+  /** Validates the file, then uploads straight to Cloudinary with the unsigned preset. The API re-checks the asset on save. */
+  async uploadImage(file: File): Promise<{ publicId: string; url: string; width: number; height: number; format: string }> {
     if (!['image/jpeg', 'image/png', 'image/webp'].includes(file.type)) throw new Error(`${file.name}: use a JPG, PNG or WebP image`);
-    const s = await firstValueFrom(this.http.post<{ cloudName: string; apiKey: string; timestamp: number; signature: string; folder: string; allowed_formats: string; maxBytes: number }>(`${this.b}/uploads/sign`, {}));
-    if (file.size > s.maxBytes) throw new Error(`${file.name}: image must be 8 MB or smaller`);
+    const pending = (this.uploadCfg ??= firstValueFrom(this.http.get<UploadConfig>(`${this.b}/uploads/config`)));
+    let c: UploadConfig;
+    try { c = await pending; } catch (e) { this.uploadCfg = undefined; throw e; }
+    if (file.size > c.maxBytes) throw new Error(`${file.name}: image must be 8 MB or smaller`);
     const fd = new FormData();
-    fd.append('file', file); fd.append('api_key', s.apiKey); fd.append('timestamp', String(s.timestamp));
-    fd.append('signature', s.signature); fd.append('folder', s.folder); fd.append('allowed_formats', s.allowed_formats);
-    const r = await fetch(`https://api.cloudinary.com/v1_1/${s.cloudName}/image/upload`, { method: 'POST', body: fd });
+    fd.append('file', file); fd.append('upload_preset', c.uploadPreset); fd.append('folder', c.folder);
+    const r = await fetch(`https://api.cloudinary.com/v1_1/${c.cloudName}/image/upload`, { method: 'POST', body: fd });
     if (!r.ok) throw new Error(`${file.name}: upload failed`);
     const j = await r.json();
-    return { publicId: j.public_id, url: j.secure_url };
+    return { publicId: j.public_id, url: j.secure_url, width: j.width, height: j.height, format: j.format };
   }
 }

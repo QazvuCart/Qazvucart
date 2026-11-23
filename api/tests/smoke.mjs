@@ -34,7 +34,7 @@ await t('every admin endpoint rejects anonymous callers', async () => {
   const id = '00000000-0000-0000-0000-000000000000';
   const routes = [['GET', '/stats'], ['GET', '/categories'], ['POST', '/categories'], ['PUT', `/categories/${id}`], ['DELETE', `/categories/${id}`],
     ['GET', '/products'], ['GET', `/products/${id}`], ['POST', '/products'], ['PUT', `/products/${id}`], ['PATCH', `/products/${id}`],
-    ['DELETE', `/products/${id}`], ['POST', '/uploads/sign'], ['GET', '/settings'], ['PUT', '/settings'], ['GET', '/me'], ['POST', '/logout']];
+    ['DELETE', `/products/${id}`], ['GET', '/uploads/config'], ['GET', '/settings'], ['PUT', '/settings'], ['GET', '/me'], ['POST', '/logout']];
   for (const [method, path] of routes) {
     const r = await call('/api/admin' + path, { method, headers: { 'content-type': 'application/json' }, body: method === 'GET' ? undefined : '{}' });
     assert.equal(r.status, 401, `${method} ${path} returned ${r.status}`);

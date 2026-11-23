@@ -6,29 +6,32 @@ export const ALLOWED_FORMATS = ['jpg', 'png', 'webp'];
 export const MAX_BYTES = 8 * 1024 * 1024;
 export const imageFolder = env.CLOUDINARY_FOLDER;
 
-const ready = !!(env.CLOUDINARY_CLOUD_NAME && env.CLOUDINARY_API_KEY && env.CLOUDINARY_API_SECRET);
-if (ready) cloudinary.config({ cloud_name: env.CLOUDINARY_CLOUD_NAME, api_key: env.CLOUDINARY_API_KEY, api_secret: env.CLOUDINARY_API_SECRET, secure: true });
+// Uploads are UNSIGNED: the browser posts straight to Cloudinary with an unsigned upload preset.
+// The API key + secret are optional and only used for the extra safety net below (checking what was
+// really uploaded, and deleting removed images). Without them the API trusts the browser's upload response.
+const hasCloud = !!env.CLOUDINARY_CLOUD_NAME;
+const hasAdminApi = hasCloud && !!(env.CLOUDINARY_API_KEY && env.CLOUDINARY_API_SECRET);
+if (hasAdminApi) cloudinary.config({ cloud_name: env.CLOUDINARY_CLOUD_NAME, api_key: env.CLOUDINARY_API_KEY, api_secret: env.CLOUDINARY_API_SECRET, secure: true });
 
-const need = () => { if (!ready) throw new HttpError(503, 'Cloudinary is not configured. Set CLOUDINARY_CLOUD_NAME, CLOUDINARY_API_KEY and CLOUDINARY_API_SECRET.'); };
-
-/** Server-signed upload: the browser uploads straight to Cloudinary, but only with a signature only a logged-in admin can get. */
-export function signUpload() {
-  need();
-  const timestamp = Math.round(Date.now() / 1000);
-  const params = { allowed_formats: ALLOWED_FORMATS.join(','), folder: imageFolder, timestamp };
-  return {
-    cloudName: env.CLOUDINARY_CLOUD_NAME!, apiKey: env.CLOUDINARY_API_KEY!, ...params,
-    signature: cloudinary.utils.api_sign_request(params, env.CLOUDINARY_API_SECRET!),
-    maxBytes: MAX_BYTES,
-  };
+/** What the admin browser needs to upload directly to Cloudinary with an unsigned preset. */
+export function uploadConfig() {
+  if (!hasCloud || !env.CLOUDINARY_UPLOAD_PRESET) throw new HttpError(503, 'Cloudinary is not configured. Set CLOUDINARY_CLOUD_NAME and CLOUDINARY_UPLOAD_PRESET.');
+  return { cloudName: env.CLOUDINARY_CLOUD_NAME!, uploadPreset: env.CLOUDINARY_UPLOAD_PRESET, folder: imageFolder, allowed_formats: ALLOWED_FORMATS.join(','), maxBytes: MAX_BYTES };
 }
 
 export interface Asset { secureUrl: string; width: number; height: number; format: string }
+/** The browser's Cloudinary upload response. Only trusted (after strict checks) when the Admin API is not configured. */
+export interface AssetHint { secureUrl: string; width: number; height: number; format: string }
 
-/** Never trust image metadata from the browser: ask Cloudinary what was really uploaded. */
-export async function verifyAsset(publicId: string): Promise<Asset> {
-  need();
+/** With the Admin API configured, ask Cloudinary what was really uploaded; otherwise validate the browser's hint. */
+export async function verifyAsset(publicId: string, hint?: AssetHint): Promise<Asset> {
+  if (!hasCloud) throw new HttpError(503, 'Cloudinary is not configured.');
   if (!publicId.startsWith(imageFolder + '/')) throw new HttpError(400, 'Invalid image');
+  if (!hasAdminApi) {
+    const okUrl = hint && hint.secureUrl.startsWith(`https://res.cloudinary.com/${env.CLOUDINARY_CLOUD_NAME}/image/upload/`) && hint.secureUrl.includes(publicId);
+    if (!hint || !okUrl || !ALLOWED_FORMATS.includes(hint.format)) throw new HttpError(400, 'Invalid image');
+    return { secureUrl: hint.secureUrl, width: hint.width, height: hint.height, format: hint.format };
+  }
   let r;
   try { r = await cloudinary.api.resource(publicId, { resource_type: 'image' }); }
   catch { throw new HttpError(400, 'Uploaded image was not found'); }
@@ -40,7 +43,7 @@ export async function verifyAsset(publicId: string): Promise<Asset> {
 }
 
 export async function destroyAssets(publicIds: string[]) {
-  if (!ready) return;
+  if (!hasAdminApi) return; // unsigned uploads cannot be deleted from the browser or without the API secret
   for (const id of publicIds) {
     try { await cloudinary.uploader.destroy(id, { resource_type: 'image', invalidate: true }); }
     catch (e) { console.error('Cloudinary cleanup failed:', e instanceof Error ? e.message : 'unknown'); }

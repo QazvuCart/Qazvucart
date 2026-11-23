@@ -8,7 +8,7 @@ import { cld } from '../core/cloudinary';
 import { moneyToInput, parseMoney } from '../core/money';
 
 interface VariantRow { variantName: string; variantValue: string; extra: string; active: boolean; }
-interface ImageRow { publicId: string; url: string; altText: string; }
+interface ImageRow { publicId: string; url: string; altText: string; asset?: { secureUrl: string; width: number; height: number; format: string }; }
 const slugify = (s: string) => s.toLowerCase().normalize('NFKD').replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 100);
 
 @Component({
@@ -152,7 +152,7 @@ export class ProductForm {
     for (const f of files) {
       try {
         const r = await this.api.uploadImage(f);
-        this.images.update((a) => [...a, { publicId: r.publicId, url: r.url, altText: '' }]);
+        this.images.update((a) => [...a, { publicId: r.publicId, url: r.url, altText: '', asset: { secureUrl: r.url, width: r.width, height: r.height, format: r.format } }]);
       } catch (e) { this.uploadError.set(errMsg(e)); }
     }
     this.uploading.set(false);
@@ -182,7 +182,7 @@ export class ProductForm {
       categoryId: this.categoryId() || null, priceMinor, comparisonPriceMinor, customisable: this.customisable(),
       customisationInstructions: this.customisable() ? this.instructions().trim() || null : null,
       active: this.active(), featured: this.featured(), variants,
-      images: this.images().map((i) => ({ publicId: i.publicId, altText: i.altText.trim() })),
+      images: this.images().map((i) => ({ publicId: i.publicId, altText: i.altText.trim(), asset: i.asset })),
     }).subscribe({
       next: () => this.router.navigate(['/admin/products']),
       error: (e) => { this.error.set(errMsg(e)); this.saving.set(false); },

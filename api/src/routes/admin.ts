@@ -3,7 +3,7 @@ import { Router } from 'express';
 import rateLimit from 'express-rate-limit';
 import { z } from 'zod';
 import { requireAdmin } from '../auth.js';
-import { Asset, destroyAssets, signUpload, verifyAsset } from '../cloudinary.js';
+import { Asset, destroyAssets, uploadConfig, verifyAsset } from '../cloudinary.js';
 import { db } from '../db/client.js';
 import { categories, productImages, productVariants, products, siteSettings } from '../db/schema.js';
 import { HttpError } from '../http-error.js';
@@ -78,7 +78,11 @@ const productInput = z.object({
     variantName: z.string().trim().min(1).max(40), variantValue: z.string().trim().min(1).max(60),
     additionalPriceMinor: z.number().int().min(0).max(100_000_000), active: z.boolean(),
   })).max(100),
-  images: z.array(z.object({ publicId: z.string().min(1).max(200), altText: z.string().trim().min(1, 'Alt text is required').max(200) })).max(10),
+  images: z.array(z.object({
+    publicId: z.string().min(1).max(200), altText: z.string().trim().min(1, 'Alt text is required').max(200),
+    // Cloudinary's upload response; only used when the Admin API secret is not configured (see cloudinary.ts).
+    asset: z.object({ secureUrl: z.string().url().max(500), width: z.number().int().positive().max(20000), height: z.number().int().positive().max(20000), format: z.string().max(10) }).optional(),
+  })).max(10),
 }).refine((p) => p.comparisonPriceMinor === null || (p.priceMinor !== null && p.comparisonPriceMinor > p.priceMinor),
   { message: 'Comparison price must be higher than the price', path: ['comparisonPriceMinor'] })
   .refine((p) => new Set(p.variants.map((v) => `${v.variantName}\u0000${v.variantValue}`)).size === p.variants.length,
@@ -136,7 +140,7 @@ async function saveProduct(existingId: string | null, input: ProductInput): Prom
     : [];
   const known = new Set(current.map((c) => c.cloudinaryPublicId));
   const verified = new Map<string, Asset>();
-  for (const img of input.images) if (!known.has(img.publicId) && !verified.has(img.publicId)) verified.set(img.publicId, await verifyAsset(img.publicId));
+  for (const img of input.images) if (!known.has(img.publicId) && !verified.has(img.publicId)) verified.set(img.publicId, await verifyAsset(img.publicId, img.asset));
 
   const removed: string[] = [];
   const productId = await db.transaction(async (tx) => {
@@ -200,8 +204,8 @@ adminRouter.delete('/products/:id', async (req, res, next) => {
 });
 
 // ---------- uploads ----------
-const signLimiter = rateLimit({ windowMs: 60_000, limit: 30, standardHeaders: true, legacyHeaders: false, message: { error: 'Too many upload requests. Try again shortly.' } });
-adminRouter.post('/uploads/sign', signLimiter, (_req, res, next) => { try { res.json(signUpload()); } catch (e) { next(e); } });
+const uploadCfgLimiter = rateLimit({ windowMs: 60_000, limit: 30, standardHeaders: true, legacyHeaders: false, message: { error: 'Too many upload requests. Try again shortly.' } });
+adminRouter.get('/uploads/config', uploadCfgLimiter, (_req, res, next) => { try { res.json(uploadConfig()); } catch (e) { next(e); } });
 
 // ---------- settings ----------
 adminRouter.get('/settings', async (_req, res, next) => {

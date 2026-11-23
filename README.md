@@ -44,10 +44,12 @@ ADMIN_EMAIL=you@example.com ADMIN_PASSWORD='a long passphrase of 12+ characters'
 ```
 Run it again with a new password to reset it. Then open `/admin/login`. Sessions last 8 hours.
 
-### Cloudinary setup
-1. Create a free account at https://cloudinary.com and copy the cloud name, API key and API secret from the dashboard.
-2. Put them in `api/.env` (`CLOUDINARY_CLOUD_NAME`, `CLOUDINARY_API_KEY`, `CLOUDINARY_API_SECRET`). The secret never leaves the API.
-3. Uploads use **server-signed** uploads, not an unsigned preset. An unsigned preset lets anyone who finds its name upload to your account; a signed upload needs a signature that only a logged-in admin can request. The signature fixes the folder (`CLOUDINARY_FOLDER`) and the allowed formats (jpg, png, webp). The 8 MB limit is checked in the browser, and again by the API, which asks Cloudinary for the real size and format when a product is saved and deletes oversized files.
+### Cloudinary setup (unsigned uploads)
+1. Create a free account at https://cloudinary.com and copy the cloud name from the dashboard.
+2. Create an **unsigned upload preset**: Settings > Upload > Upload presets > Add. Signing mode `Unsigned`, folder `qazvucart/products` (same as `CLOUDINARY_FOLDER`), allowed formats `jpg, png, webp`, and if offered a max file size of 8 MB.
+3. Put `CLOUDINARY_CLOUD_NAME` and `CLOUDINARY_UPLOAD_PRESET` in `api/.env`. The admin browser fetches them from `GET /api/admin/uploads/config` (admin login required) and uploads straight to Cloudinary. No API secret is needed for uploading.
+4. Trade-off: the preset name is visible to anyone who inspects the admin page's network calls, and an unsigned preset lets anyone who knows it upload to your account. Lock the preset down (allowed formats, size limit, fixed folder) and keep an eye on your Cloudinary usage.
+5. Optional but recommended: also set `CLOUDINARY_API_KEY` and `CLOUDINARY_API_SECRET` (server only). The API then asks Cloudinary for the real size and format when a product is saved, deletes oversized files, and deletes images removed from products. Without them, the API accepts the upload details sent by the browser after strict checks (Cloudinary URL for your cloud, your folder, allowed format) and removed images stay in Cloudinary until you delete them there.
 4. Images removed from a product, or belonging to a deleted product, are deleted from Cloudinary only if no other product still uses them. Images uploaded in the form but never saved stay in Cloudinary until you remove them there.
 
 ### Admin security
@@ -88,7 +90,7 @@ There is no payment gateway and no order storage. The product page collects the 
 - `npm --prefix web test`: 13 unit tests for money handling, validation, Maps-link allow-listing, message content, field-forgery protection, URL encoding round-trip, and missing-price/number handling. Needs only Node 22.18+ (no installs).
 - `API_URL=http://localhost:4000 npm --prefix api run test:smoke`: black-box checks against a running API on an empty database: empty catalogue, 404s, input validation, settings whitelist, every admin route returns 401 anonymously, forged cookie, login error wording, headers, no leaked internals.
 - Migration check: `api/migrations/0000_init.sql` applies cleanly to PostgreSQL 16, creates no rows, and rejects negative prices.
-- Hardening added: rate limit on `/api/admin/uploads/sign` (30/min).
+- Hardening added: rate limit on `/api/admin/uploads/config` (30/min).
 
 ### Manual checklist (run once before launch)
 1. `npm run build` succeeds; start both services.
@@ -117,7 +119,8 @@ The free plan has no Shell tab and sleeps after inactivity (the first request af
 | `ADMIN_EMAIL`, `ADMIN_PASSWORD` | Admin login, created/updated at every start (password 12+ characters). Changing the password signs the admin out everywhere. |
 | `WHATSAPP_NUMBER` | Digits with country code, e.g. `919876543210` (Admin > Settings overrides it) |
 | `INSTAGRAM_URL` | Optional, https link |
-| `CLOUDINARY_CLOUD_NAME`, `CLOUDINARY_API_KEY`, `CLOUDINARY_API_SECRET` | Image uploads |
+| `CLOUDINARY_CLOUD_NAME`, `CLOUDINARY_UPLOAD_PRESET` | Image uploads (unsigned preset) |
+| `CLOUDINARY_API_KEY`, `CLOUDINARY_API_SECRET` | Optional: verify uploads and delete removed images |
 | `PUBLIC_SITE_URL` | Your `https://….onrender.com` address (sitemap and product links) |
 | `ALLOWED_HOSTS` | Only for a custom domain |
 
