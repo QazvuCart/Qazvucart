@@ -1,5 +1,5 @@
 import { HttpErrorResponse } from '@angular/common/http';
-import { Component, computed, effect, inject, input, signal } from '@angular/core';
+import { Component, DestroyRef, computed, effect, inject, input, signal } from '@angular/core';
 import { toObservable, toSignal } from '@angular/core/rxjs-interop';
 import { RouterLink } from '@angular/router';
 import { catchError, map, of, startWith, switchMap } from 'rxjs';
@@ -9,12 +9,14 @@ import { ProductsService } from '../core/products.service';
 import { Seo } from '../core/seo';
 import { NotFound } from './not-found';
 import { OrderForm } from './order-form';
+import { Tilt } from '../shared/motion-directives';
 
 type State = { status: 'loading' | 'ok' | 'notfound' | 'error'; product?: ProductDetail };
 
 @Component({
   selector: 'qz-product-detail',
-  imports: [RouterLink, NotFound, OrderForm],
+  imports: [RouterLink, NotFound, OrderForm, Tilt],
+  host: { '(document:keydown)': 'key($event)' },
   template: `
     @switch (state().status) {
       @case ('loading') { <section class="container-qz py-16"><div class="aspect-[4/5] md:aspect-[16/9] rounded-2xl bg-sage-soft"></div></section> }
@@ -34,23 +36,33 @@ type State = { status: 'loading' | 'ok' | 'notfound' | 'error'; product?: Produc
             </nav>
 
             <div class="grid gap-10 md:grid-cols-[1.1fr_1fr] items-start">
-              <!-- Gallery -->
+              <!-- Gallery: whole image is always visible (never cropped); tap it for full screen. -->
               <div>
-                <div class="rounded-2xl bg-sage shadow-lift overflow-hidden aspect-[4/5] grid place-items-center">
+                <div class="pd-stage">
                   @if (p.images[activeImg()]; as img) {
-                    <img [src]="cld(img.url, 960)" [attr.srcset]="srcset(img.url, [480, 720, 960, 1280])" [attr.sizes]="'(min-width: 768px) 50vw, 100vw'" [alt]="img.alt" [attr.width]="img.width" [attr.height]="img.height" fetchpriority="high" decoding="async" class="size-full object-cover">
+                    <button type="button" class="pd-open tilt" qzTilt="3" (click)="openZoom()" aria-label="View image full screen">
+                      @for (im of [img]; track im.url) {
+                        <img class="pd-img" [class.pd-prev]="dir() < 0" [src]="cld(im.url, 1280)" [attr.srcset]="srcset(im.url, [480, 720, 960, 1280, 1600])"
+                             [attr.sizes]="'(min-width: 768px) 55vw, 100vw'" [alt]="im.alt" [attr.width]="im.width" [attr.height]="im.height" fetchpriority="high" decoding="async">
+                      }
+                      <span class="pd-full" aria-hidden="true">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></svg>
+                      </span>
+                    </button>
                   } @else {
-                    <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.3" class="opacity-40" role="img" aria-label="No image yet">
-                      <rect x="3" y="4" width="18" height="16" rx="2"/><circle cx="9" cy="10" r="1.6"/><path d="M4 18l5-5 4 4 3-3 4 4"/>
-                    </svg>
+                    <div class="pd-empty">
+                      <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.3" class="opacity-40" role="img" aria-label="No image yet">
+                        <rect x="3" y="4" width="18" height="16" rx="2"/><circle cx="9" cy="10" r="1.6"/><path d="M4 18l5-5 4 4 3-3 4 4"/>
+                      </svg>
+                    </div>
                   }
                 </div>
                 @if (p.images.length > 1) {
-                  <ul class="mt-4 flex gap-3 overflow-x-auto list-none p-0">
+                  <ul class="mt-4 flex gap-3 overflow-x-auto list-none p-0 pb-2">
                     @for (img of p.images; track $index) {
-                      <li><button type="button" (click)="activeImg.set($index)" [attr.aria-label]="'Show image ' + ($index + 1)" [attr.aria-current]="$index === activeImg()"
+                      <li><button type="button" (click)="select($index)" [attr.aria-label]="'Show image ' + ($index + 1)" [attr.aria-current]="$index === activeImg()"
                                   class="size-16 rounded-lg overflow-hidden border-2 bg-sage-soft" [class]="$index === activeImg() ? 'border-tangerine' : 'border-transparent'">
-                        <img [src]="cld(img.url, 128)" alt="" loading="lazy" class="size-full object-cover"></button></li>
+                        <img [src]="cld(img.url, 128)" alt="" loading="lazy" class="size-full object-contain"></button></li>
                     }
                   </ul>
                 }
@@ -121,6 +133,29 @@ type State = { status: 'loading' | 'ok' | 'notfound' | 'error'; product?: Produc
               </div>
             </div>
           </section>
+
+          @if (zoom()) {
+            <div class="lb" role="dialog" aria-modal="true" aria-label="Image viewer" (click)="closeZoom()" (touchstart)="swipeStart($event)" (touchend)="swipeEnd($event, p.images.length)">
+              <button type="button" class="lb-btn lb-close" (click)="closeZoom(); $event.stopPropagation()" aria-label="Close full screen view">
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><path d="M5 5l14 14M19 5L5 19"/></svg>
+              </button>
+              @if (p.images.length > 1) {
+                <button type="button" class="lb-btn lb-nav lb-left" (click)="go(-1, p.images.length); $event.stopPropagation()" aria-label="Previous image">
+                  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 5l-7 7 7 7"/></svg>
+                </button>
+                <button type="button" class="lb-btn lb-nav lb-right" (click)="go(1, p.images.length); $event.stopPropagation()" aria-label="Next image">
+                  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 5l7 7-7 7"/></svg>
+                </button>
+                <span class="lb-count" aria-live="polite">{{ activeImg() + 1 }} / {{ p.images.length }}</span>
+              }
+              @if (p.images[activeImg()]; as img) {
+                @for (im of [img]; track im.url) {
+                  <img class="lb-img" [class.pd-prev]="dir() < 0" [src]="cld(im.url, 1600)" [attr.srcset]="srcset(im.url, [960, 1280, 1600, 2000])" sizes="100vw"
+                       [alt]="im.alt" (click)="$event.stopPropagation()">
+                }
+              }
+            </div>
+          }
         }
       }
     }
@@ -145,6 +180,9 @@ export class ProductDetailPage {
   );
 
   activeImg = signal(0);
+  dir = signal(1);   // 1 = moving forward, -1 = back; decides which way the 3D swing goes
+  zoom = signal(false);
+  private touchX = 0;
   selected = signal<Record<string, string>>({});
   qty = signal(1);
   note = signal('');
@@ -173,6 +211,7 @@ export class ProductDetailPage {
 
   constructor() {
     const seo = inject(Seo);
+    inject(DestroyRef).onDestroy(() => { if (typeof document !== 'undefined') document.body.classList.remove('qz-lock'); });
     effect(() => { this.slug(); this.selected.set({}); this.qty.set(1); this.note.set(''); this.activeImg.set(0); });
     effect(() => {
       const p = this.state().product;
@@ -185,6 +224,22 @@ export class ProductDetailPage {
     });
   }
 
+  select(i: number) { this.dir.set(i >= this.activeImg() ? 1 : -1); this.activeImg.set(i); }
+  go(d: number, n: number) { this.dir.set(d); this.activeImg.update((i) => (i + d + n) % n); }
+  openZoom() { this.zoom.set(true); document.body.classList.add('qz-lock'); }
+  closeZoom() { if (!this.zoom()) return; this.zoom.set(false); document.body.classList.remove('qz-lock'); }
+  swipeStart(e: TouchEvent) { this.touchX = e.touches[0]?.clientX ?? 0; }
+  swipeEnd(e: TouchEvent, n: number) {
+    const dx = (e.changedTouches[0]?.clientX ?? 0) - this.touchX;
+    if (n > 1 && Math.abs(dx) > 50) this.go(dx < 0 ? 1 : -1, n);
+  }
+  key(e: KeyboardEvent) {
+    if (!this.zoom()) return;
+    const n = this.state().product?.images.length ?? 0;
+    if (e.key === 'Escape') this.closeZoom();
+    else if (n > 1 && e.key === 'ArrowRight') this.go(1, n);
+    else if (n > 1 && e.key === 'ArrowLeft') this.go(-1, n);
+  }
   choose(name: string, value: string) { this.selected.update((s) => ({ ...s, [name]: value })); }
   setQty(n: number) { this.qty.set(Math.min(99, Math.max(1, Math.trunc(n)))); }
 }

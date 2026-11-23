@@ -21,7 +21,7 @@ Status: Phases 1-5 built (foundation, design system, storefront, admin, WhatsApp
 - Future multi-vendor: add a nullable `vendor_id` to `products` later; no marketplace code in V1.
 
 ## Spatial grid and motion (v2)
-- `web/src/app/shared/spatial-grid.ts` is the product gallery: 3 columns on tablet/desktop, 2 on phones, bent around the viewer in 3D. Styles are the `.sg-*` rules in `web/src/styles.css`.
+- `web/src/app/shared/spatial-grid.ts` is the product gallery: 3 columns on every screen size (compact on phones), bent around the viewer in 3D. Card images keep their own proportions and are never cropped. The product page shows the whole photo too; tap it for a full-screen viewer (swipe, arrows, Esc). Styles are the `.sg-*` rules in `web/src/styles.css`.
 - `web/src/app/shared/motion.ts` holds all motion logic (no Angular imports): the curved-grid engine, the coming/going reveal, pointer tilt and desktop wheel smoothing. `motion-directives.ts` exposes them as `qzReveal`, `qzRevealDelay` and `qzTilt`.
 - Performance rules: only transform and opacity animate; one passive scroll listener and one rAF loop that sleeps when idle; only cards near the viewport are updated. Phones skip the scroll-linked sheen/shadow variables (measured about 2x frame time on a throttled phone) and keep native touch scrolling. Wheel smoothing is desktop-mouse only.
 - `prefers-reduced-motion` turns every effect off and leaves content in its normal state. Nothing is hidden until JavaScript is running, so server-rendered pages stay readable.

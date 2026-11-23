@@ -23,7 +23,7 @@ export class Root {
     const destroyRef = inject(DestroyRef);
     // Browser only. Desktop mouse-wheel inertia + eased in-page anchor jumps; touch devices stay native.
     afterNextRender(() => {
-      const stopSmooth = initSmoothScroll(() => !location.pathname.startsWith('/admin'));
+      const stopSmooth = initSmoothScroll(() => !location.pathname.startsWith('/admin') && !document.body.classList.contains('qz-lock'));
       const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
       const onClick = (e: MouseEvent) => {
         if (e.defaultPrevented || e.button !== 0 || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return;

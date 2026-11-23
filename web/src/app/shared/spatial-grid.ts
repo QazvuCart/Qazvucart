@@ -22,9 +22,9 @@ import { Tilt } from './motion-directives';
             <a class="sg-card" [routerLink]="['/products', p.slug]">
               <div class="sg-face tilt glare" qzTilt="5">
                 <span class="sg-idx" aria-hidden="true">{{ no(i) }}</span>
-                <div class="sg-media">
+                <div class="sg-media" [style.aspect-ratio]="p.image ? ratio(p.image) : null">
                   @if (p.image; as img) {
-                    <img [src]="cld(img.url, 640)" [attr.srcset]="srcset(img.url, [320, 640, 960])" [attr.sizes]="'(min-width: 1024px) 33vw, (min-width: 768px) 30vw, 50vw'"
+                    <img [src]="cld(img.url, 640)" [attr.srcset]="srcset(img.url, [320, 640, 960])" [attr.sizes]="'(min-width: 1024px) 24rem, 33vw'"
                          [alt]="img.alt" [attr.width]="img.width" [attr.height]="img.height" loading="lazy" decoding="async">
                   } @else {
                     <svg width="44" height="44" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" class="opacity-40" role="img" aria-label="No image yet">
@@ -60,6 +60,12 @@ export class SpatialGrid {
     let stop = () => {};
     afterNextRender(() => { stop = createSpatialGrid(this.ul().nativeElement); });
     inject(DestroyRef).onDestroy(() => stop());
+  }
+
+  /** Card media keeps the photo's own proportions (limited to a sensible range) and the image is letterboxed, never cropped. */
+  ratio(img: { width: number | null; height: number | null }) {
+    const r = img.width && img.height ? img.width / img.height : 0.8;
+    return Math.min(1.35, Math.max(0.62, r)).toFixed(3);
   }
 
   no(i: number) { return String(i + 1).padStart(2, '0'); }

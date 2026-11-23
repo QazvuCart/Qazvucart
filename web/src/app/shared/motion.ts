@@ -42,18 +42,20 @@ interface Item { el: HTMLElement; c: number; live: boolean; seen: boolean; cur: 
  *  - the middle column drifts at a slightly different speed (parallax)
  *  - cards fade and shrink as they leave, and fade/scale in as they arrive
  */
-function poseFor(p: number, c: number, mobile: boolean): Pose {
+function poseFor(p: number, c: number, vel: number, mobile: boolean): Pose {
   const a = Math.abs(p);
-  const kx = mobile ? 6 : 12;
-  const ky = mobile ? 4.5 : 13;
-  const depth = mobile ? 60 : 120;
+  const kx = mobile ? 7 : 12;
+  const ky = mobile ? 7 : 13;
+  const depth = mobile ? 70 : 130;
   const side = mobile ? 0 : 32; // phones: keep the outer column inside the screen edge
-  const drift = mobile ? 0 : 30;
+  const drift = mobile ? 26 : 56; // columns slide past each other vertically
+  const lean = clamp(vel * 7, -9, 9) * (mobile ? 0.8 : 1); // cards tip with scroll speed, settle when you stop
+  const twist = Math.min(Math.abs(vel) * 5, 7); // outer columns swing open while scrolling fast
   return {
     ty: p * drift * (1 - 1.7 * Math.abs(c)),
     tz: -Math.pow(a, 1.6) * depth + c * c * side,
-    rx: -p * kx,
-    ry: -c * ky,
+    rx: -p * kx + lean,
+    ry: -c * (ky + twist),
     s: 1 - a * a * 0.07,
     o: 1 - smoothstep(0.72, 1.18, a),
   };
@@ -67,6 +69,8 @@ export function createSpatialGrid(ul: HTMLElement): () => void {
   let raf = 0;
   let last = 0;
   let dead = false;
+  let lastSy = scrollY;
+  let vel = 0; // smoothed scroll speed in px/ms
 
   const liveIo = new IntersectionObserver((entries) => {
     for (const e of entries) {
@@ -123,6 +127,9 @@ export function createSpatialGrid(ul: HTMLElement): () => void {
     const sy = scrollY;
     const mobile = innerWidth < 768;
     let busy = false;
+    vel += ((dt > 0 ? (sy - lastSy) / dt : 0) - vel) * (1 - Math.exp(-dt / 140));
+    lastSy = sy;
+    if (Math.abs(vel) > 0.02) busy = true; else vel = 0;
 
     // One vanishing point at the middle of the screen, so the whole grid bends around the viewer.
     ul.style.perspectiveOrigin = `50% ${Math.round(sy + vh / 2 - docTop(ul))}px`;
@@ -135,7 +142,7 @@ export function createSpatialGrid(ul: HTMLElement): () => void {
       const h = it.el.offsetHeight;
       const cy = docTop(it.el) + h / 2 - sy;
       const p = clamp((cy - vh / 2) / (vh / 2 + h / 2), -1.3, 1.3);
-      const t = poseFor(p, it.c, mobile);
+      const t = poseFor(p, it.c, vel, mobile);
       if (!it.cur) {
         it.cur = t;
       } else {
@@ -179,12 +186,16 @@ export function createSpatialGrid(ul: HTMLElement): () => void {
   void ul.offsetWidth; // flush so the entrance transition starts from the hidden state
   kick();
 
+  // Safety net: never leave a card invisible if the observer misses it.
+  const safety = setTimeout(() => { for (const it of items) if (it.live && !it.seen) { it.seen = true; it.el.classList.add('seen'); } }, 3500);
+
   addEventListener('scroll', kick, { passive: true });
   addEventListener('resize', onResize, { passive: true });
   document.fonts?.ready.then(() => { if (!dead) { refresh(); kick(); } });
 
   return () => {
     dead = true;
+    clearTimeout(safety);
     cancelAnimationFrame(raf);
     cancelAnimationFrame(resizeRaf);
     removeEventListener('scroll', kick);
